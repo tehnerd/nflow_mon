@@ -45,7 +45,7 @@ class NFLOWv5(object):
     def parse_header(self, packet):
         return struct.unpack(self._header_fmt,packet[0:24])
 
-    def parse_packet(self, packet):
+    def parse_packet(self, packet, agent):
         header = self.parse_header(packet)
         flow_count = header[1]
         flow = 1

@@ -16,11 +16,11 @@ def main():
     NF5 = nflowv5.NFLOWv5()
     IPF = ipfix.IPFIX()
     while True:
-        packet = dsock.recv(9000)
+        packet, agent = dsock.recvfrom(9000)
         if(packet[1] == '\x05'):
-            NF5.parse_packet(packet)
+            NF5.parse_packet(packet, agent[0])
         elif(packet[1] == '\x0A'):
-            IPF.parse_set(packet)
+            IPF.parse_set(packet, agent[0])
 
 if __name__ == "__main__":
     main()

@@ -201,11 +201,11 @@ class IPFIX(object):
     def parse_header(self, packet):
         return struct.unpack(self._header_fmt, packet[0:16])
 
-    def parse_tmplt_set(self, packet):
+    def parse_tmplt_set(self, packet, agent):
         tmplt_record = struct.unpack(self._tmplt_hdr_fmt,packet[20:24])
         tmplt_id = tmplt_record[0]
-        self.template_dict[tmplt_id] = "!"
-        self.template_len_dict[tmplt_id] = 0
+        self.template_dict[agent][tmplt_id] = "!"
+        self.template_len_dict[agent][tmplt_id] = 0
         tmplt_fields_count = tmplt_record[1]
         fld_cntr = 1
         packet = packet[24:]
@@ -213,18 +213,18 @@ class IPFIX(object):
             fld_spec_id = struct.unpack("!H",packet[0:2])[0]
             if ((fld_spec_id >> 15) == 0):
                 fld = struct.unpack(self._fld_spec_fmt_ietf,packet[0:4])
-                self.template_dict[tmplt_id]+=self.format_dict[str(fld[1])]
-                self.template_len_dict[tmplt_id]+=fld[1]
+                self.template_dict[agent][tmplt_id]+=self.format_dict[str(fld[1])]
+                self.template_len_dict[agent][tmplt_id]+=fld[1]
                 fld_cntr += 1
                 packet = packet[4:]
             else:
                 packet = packet[8:]
                 fld_cntr += 1
 
-    def parse_data_set(self,packet, set_hdr):
-        tmplt_struct = self.template_dict[set_hdr[0]]
+    def parse_data_set(self,packet, set_hdr, agent):
+        tmplt_struct = self.template_dict[agent][set_hdr[0]]
         set_len = set_hdr[1]
-        tmplt_len = self.template_len_dict[set_hdr[0]]
+        tmplt_len = self.template_len_dict[agent][set_hdr[0]]
         offset = 20
         while offset < set_len:
             flow_record = struct.unpack(tmplt_struct,
@@ -233,12 +233,15 @@ class IPFIX(object):
             offset += tmplt_len
            
 
-    def parse_set(self, packet):
+    def parse_set(self, packet, agent):
+        if not agent in self.template_dict:
+            self.template_dict[agent] = dict()
+            self.template_len_dict[agent] = dict()
         set_hdr = struct.unpack(self._set_hdr_fmt, packet[16:20])
         if (set_hdr[0] == 2):
-            self.parse_tmplt_set(packet)
-        if(set_hdr[0] in self.template_dict):
-            self.parse_data_set(packet, set_hdr)
+            self.parse_tmplt_set(packet, agent)
+        if(set_hdr[0] in self.template_dict[agent]):
+            self.parse_data_set(packet, set_hdr, agent)
         else:
             print("miss")
 
