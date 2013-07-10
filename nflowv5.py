@@ -49,9 +49,9 @@ class NFLOWv5(object):
         header = self.parse_header(packet)
         flow_count = header[1]
         flow = 1
+        flow_list = list()
         while flow <= flow_count:
             flow_record = struct.unpack(self._flow_fmt,packet[24*flow:24*flow+48])
-            src_ip = socket.inet_ntoa(struct.pack('!L', flow_record[0]))
-            print(src_ip)
+            flow_list.append([flow_record[1],flow_record[6], flow_record[5]])
             flow += 1
-
+        return flow_list

@@ -13,14 +13,13 @@ dsock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 dsock.bind((DAEMON_IP, DAEMON_PORT))
 NF5 = nflowv5.NFLOWv5()
 IPF = ipfix.IPFIX()
-
+SAMPLING_RATE = 2000
 
 vips_bw = dict()
 vips_baseline = dict()
 vips_multiplyer = dict()
 vips_map = dict()
 cntr = dict()
-cntr[1] = 0
 
 if not len(sys.argv) > 1:
     print("cant find file with mapping")
@@ -59,14 +58,14 @@ def collect_flow():
         if flow_list:
             for flow in flow_list:
                 if flow[0] in vips_bw:
-                    vips_bw[flow[0]] += flow[1]
-        cntr[1] += 1
+                    vips_bw[flow[0]] += (flow[1]*SAMPLING_RATE)
 
 
 def analyze_stats():
-    gevent.sleep(10)
+    gevent.sleep(60)
     for key in vips_bw.keys():
         if vips_bw[key] != 0:
+            print("%s -- %s"%(vips_map[key],vips_bw[key],))
             if vips_baseline[key] != 0:
                 if vips_bw[key] > vips_baseline[key]*vips_multiplyer[key]:
                     print("possible ddos on %s"%(vips_map[key],))
