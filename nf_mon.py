@@ -11,6 +11,29 @@ DAEMON_IP = '0.0.0.0'
 dsock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 dsock.bind((DAEMON_IP, DAEMON_PORT))
 
+vips_bw = dict()
+vips_map = dict()
+
+if not len(sys.argv) > 1:
+    print("cant find file with mapping")
+    print("usage: nf_mon <file/w/mapping>")
+    sys.exit(-1)
+
+try:
+    vips_file = open(sys.argv[1],"r")
+except:
+    sys.exit("cant open file")
+
+for vip in vips_file:
+    vip = vip.strip()
+    vip_net = socket.inet_aton(vip)
+    vip_int = struct.unpack('!L',vip_net)[0]
+    vips_bw[vip_int] = 0
+    vips_map[vip_int] = vip
+
+def clear_bw():
+    for key in vips_bw.keys()
+        vips_bw[key] = 0
 
 def main():
     NF5 = nflowv5.NFLOWv5()
