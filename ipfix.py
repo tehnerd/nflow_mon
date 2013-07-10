@@ -227,20 +227,20 @@ class IPFIX(object):
             else:
                 packet = packet[8:]
                 fld_cntr += 1
-        print(self.ordinary_fields[agent][tmplt_id])
-
     def parse_data_set(self,packet, set_hdr, agent):
         tmplt_struct = self.template_dict[agent][set_hdr[0]]
         set_len = set_hdr[1]
         tmplt_len = self.template_len_dict[agent][set_hdr[0]]
         offset = 20
+        flow_list = list()
         while offset < set_len:
             flow_record = struct.unpack(tmplt_struct,
                                         packet[offset:offset + tmplt_len])
             ordinary_record = [flow_record[cntr] for cntr
                                in self.ordinary_fields[agent][set_hdr[0]]]
-            print(ordinary_record)
             offset += tmplt_len
+            flow_list.append(ordinary_record)
+        return flow_list
            
 
     def parse_set(self, packet, agent):
@@ -253,7 +253,7 @@ class IPFIX(object):
         if (set_hdr[0] == 2):
             self.parse_tmplt_set(packet, agent)
         if(set_hdr[0] in self.template_dict[agent]):
-            self.parse_data_set(packet, set_hdr, agent)
+            return self.parse_data_set(packet, set_hdr, agent)
 
 
 
