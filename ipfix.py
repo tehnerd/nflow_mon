@@ -197,7 +197,8 @@ class IPFIX(object):
         }
         self.template_dict = dict()
         self.template_len_dict = dict()
-
+        self.ordinary_fields = dict()
+        self.extended_fields = dict()
     def parse_header(self, packet):
         return struct.unpack(self._header_fmt, packet[0:16])
 
@@ -206,6 +207,7 @@ class IPFIX(object):
         tmplt_id = tmplt_record[0]
         self.template_dict[agent][tmplt_id] = "!"
         self.template_len_dict[agent][tmplt_id] = 0
+        self.ordinary_fields[agent][tmplt_id] = list()
         tmplt_fields_count = tmplt_record[1]
         fld_cntr = 1
         packet = packet[24:]
@@ -215,11 +217,17 @@ class IPFIX(object):
                 fld = struct.unpack(self._fld_spec_fmt_ietf,packet[0:4])
                 self.template_dict[agent][tmplt_id]+=self.format_dict[str(fld[1])]
                 self.template_len_dict[agent][tmplt_id]+=fld[1]
+                if(self.ipfix_dict[str(fld[0])] == "destinationIPv4Address" or
+                   self.ipfix_dict[str(fld[0])] == "destinationIPv6Address" or
+                   self.ipfix_dict[str(fld[0])] == "octetDeltaCount" or
+                   self.ipfix_dict[str(fld[0])] == "packetDeltaCount"):
+                    self.ordinary_fields[agent][tmplt_id].append(fld_cntr-1)
                 fld_cntr += 1
                 packet = packet[4:]
             else:
                 packet = packet[8:]
                 fld_cntr += 1
+        print(self.ordinary_fields[agent][tmplt_id])
 
     def parse_data_set(self,packet, set_hdr, agent):
         tmplt_struct = self.template_dict[agent][set_hdr[0]]
@@ -229,7 +237,9 @@ class IPFIX(object):
         while offset < set_len:
             flow_record = struct.unpack(tmplt_struct,
                                         packet[offset:offset + tmplt_len])
-            print(flow_record)
+            ordinary_record = [flow_record[cntr] for cntr
+                               in self.ordinary_fields[agent][set_hdr[0]]]
+            print(ordinary_record)
             offset += tmplt_len
            
 
@@ -237,13 +247,13 @@ class IPFIX(object):
         if not agent in self.template_dict:
             self.template_dict[agent] = dict()
             self.template_len_dict[agent] = dict()
+            self.ordinary_fields[agent] = dict()
+            self.extended_fields[agent] = dict()
         set_hdr = struct.unpack(self._set_hdr_fmt, packet[16:20])
         if (set_hdr[0] == 2):
             self.parse_tmplt_set(packet, agent)
         if(set_hdr[0] in self.template_dict[agent]):
             self.parse_data_set(packet, set_hdr, agent)
-        else:
-            print("miss")
 
 
 
