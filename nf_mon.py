@@ -40,6 +40,7 @@ for vip in vips_file:
 def clear_bw():
     for key in vips_bw.keys():
         vips_bw[key] = 0
+
 def collect_flow():
     while True:
         packet, agent = dsock.recvfrom(9000)
@@ -55,17 +56,17 @@ def collect_flow():
         cntr[1] += 1
 
 
-
-def print_stats():
-    gevent.sleep(60)
-    print(cntr[1]/60)
-    cntr[1] = 0
+def analyze_stats():
+    gevent.sleep(10)
+    for key in vips_bw.keys():
+        if vips_bw[key] != 0:
+            print("%s -- %s"%(vips_map[key],vips_bw[key],))
     clear_bw()
 
 def main():
     gevent.spawn(collect_flow)
     while True:
-        analyze_job = gevent.spawn(print_stats)
+        analyze_job = gevent.spawn(analyze_stats)
         gevent.joinall([analyze_job])
 
 if __name__ == "__main__":
