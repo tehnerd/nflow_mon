@@ -16,6 +16,8 @@ IPF = ipfix.IPFIX()
 
 
 vips_bw = dict()
+vips_baseline = dict()
+vips_multiplyer = dict()
 vips_map = dict()
 cntr = dict()
 cntr[1] = 0
@@ -32,10 +34,15 @@ except:
 
 for vip in vips_file:
     vip = vip.strip()
-    vip_net = socket.inet_aton(vip)
+    vip = vip.split()
+    if len(vip) != 2:
+        sys.exit("vips file must be in format <vip> -- <baseline>")
+    vip_net = socket.inet_aton(vip[0])
     vip_int = struct.unpack('!L',vip_net)[0]
     vips_bw[vip_int] = 0
-    vips_map[vip_int] = vip
+    vips_baseline[vip_int] = 0
+    vips_multiplyer[vip_int] = int(vip[1])
+    vips_map[vip_int] = vip[0]
 
 def clear_bw():
     for key in vips_bw.keys():
@@ -60,7 +67,10 @@ def analyze_stats():
     gevent.sleep(10)
     for key in vips_bw.keys():
         if vips_bw[key] != 0:
-            print("%s -- %s"%(vips_map[key],vips_bw[key],))
+            if vips_baseline[key] != 0:
+                if vips_bw[key] > vips_baseline[key]*vips_multiplyer[key]:
+                    print("possible ddos on %s"%(vips_map[key],))
+            vips_baseline[key] = vips_bw[key]
     clear_bw()
 
 def main():
