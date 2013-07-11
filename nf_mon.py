@@ -60,7 +60,8 @@ def collect_flow():
         flow_list = list()
         ddos_list = list()
         if(packet[1] == '\x05'):
-            flow_list, ddos_list = NF5.parse_packet(packet, agent[0])
+            flow_list, ddos_list = NF5.parse_packet(packet, 
+                                                    agent[0], vips_flags)
         elif(packet[1] == '\x0A'):
             flow_list, ddos_list = IPF.parse_set(packet, agent[0], vips_flags)
         if flow_list:
@@ -79,6 +80,7 @@ def analyze_stats():
         for key in vips_flags.keys():
             if vips_flags[key] == 1:
                 vips_flags[key] = 0
+        ddos_records = list()
     for key in vips_pps.keys():
         if vips_pps[key] != 0:
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])

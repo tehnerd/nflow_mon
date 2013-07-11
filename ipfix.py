@@ -251,6 +251,7 @@ class IPFIX(object):
                flag_dict[ordinary_record[0]] == 1):
                 extended_record = [flow_record[cntr] for cntr
                                in self.extended_fields[agent][set_hdr[0]]]
+                extended_record.prepend(agent)
                 ddos_list.append(extended_record)
             offset += tmplt_len
             flow_list.append(ordinary_record)

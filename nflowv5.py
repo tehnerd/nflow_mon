@@ -45,7 +45,7 @@ class NFLOWv5(object):
     def parse_header(self, packet):
         return struct.unpack(self._header_fmt,packet[0:24])
 
-    def parse_packet(self, packet, agent):
+    def parse_packet(self, packet, agent, flag_dict = None):
         header = self.parse_header(packet)
         flow_count = header[1]
         flow = 1
@@ -54,5 +54,16 @@ class NFLOWv5(object):
         while flow <= flow_count:
             flow_record = struct.unpack(self._flow_fmt,packet[24*flow:24*flow+48])
             flow_list.append([flow_record[1],flow_record[6], flow_record[5]])
+            if(flag_dict and flow_record[1] in flag_dict and
+               flag_dict[flow_record[1]] == 1):
+                ddos_list.append((agent,
+                                 flow_record[0],
+                                 flow_record[1],
+                                 flow_record[13],
+                                 flow_record[9],
+                                 flow_record[10],
+                                 flow_record[3],
+                                 flow_record[6],
+                                 flow_record[5]))
             flow += 1
         return flow_list, ddos_list
