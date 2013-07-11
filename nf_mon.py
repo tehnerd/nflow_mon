@@ -69,8 +69,8 @@ def analyze_stats():
         if vips_pps[key] != 0:
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
-                if vips_pps[key] > 10000 and 
-                   vips_pps[key] > vips_baseline[key]*vips_multiplyer[key]:
+                if(vips_pps[key] > 10000 and 
+                   vips_pps[key] > vips_baseline[key]*vips_multiplyer[key]):
                     print("possible ddos on %s"%(vips_map[key],))
             vips_baseline[key] = vips_pps[key]
     clear_bw()
