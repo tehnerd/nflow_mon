@@ -8,6 +8,16 @@ import struct
 import ipfix
 import nflowv5
 
+#dictionary initialazing
+vips_pps = dict()
+vips_baseline = dict()
+vips_multiplier = dict()
+vips_map = dict()
+vips_flags = dict()
+ddos_records = list()
+
+
+
 DAEMON_PORT  = 5000
 DAEMON_IP = '0.0.0.0'
 dsock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
@@ -16,12 +26,6 @@ NF5 = nflowv5.NFLOWv5()
 IPF = ipfix.IPFIX()
 SAMPLING_RATE = 2000
 nfmon_gauge = statsd.Gauge('netflow_mon_pps')
-
-vips_pps = dict()
-vips_baseline = dict()
-vips_multiplier = dict()
-vips_map = dict()
-cntr = dict()
 
 if not len(sys.argv) > 1:
     print("cant find file with mapping")
@@ -41,6 +45,7 @@ for vip in vips_file:
     vip_net = socket.inet_aton(vip[0])
     vip_int = struct.unpack('!L',vip_net)[0]
     vips_pps[vip_int] = 0
+    vips_flags[vip_int] = 0
     vips_baseline[vip_int] = 0
     vips_multiplier[vip_int] = int(vip[1])
     vips_map[vip_int] = vip[0]
@@ -53,25 +58,35 @@ def collect_flow():
     while True:
         packet, agent = dsock.recvfrom(9000)
         flow_list = list()
+        ddos_list = list()
         if(packet[1] == '\x05'):
-            flow_list = NF5.parse_packet(packet, agent[0])
+            flow_list, ddos_list = NF5.parse_packet(packet, agent[0])
         elif(packet[1] == '\x0A'):
-            flow_list = IPF.parse_set(packet, agent[0])
+            flow_list, ddos_list = IPF.parse_set(packet, agent[0], vips_flags)
         if flow_list:
             for flow in flow_list:
                 if flow[0] in vips_pps:
                     vips_pps[flow[0]] += (flow[2]*SAMPLING_RATE)
+        if ddos_list:
+            ddos_records.append(ddos_list)
 
 
 def analyze_stats():
     gevent.sleep(60)
+    if ddos_records:
+        for record in ddos_records:
+            print(record)
+        for key in vips_flags.keys():
+            if vips_flags[key] == 1:
+                vips_flags[key] = 0
     for key in vips_pps.keys():
         if vips_pps[key] != 0:
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
-                if(vips_pps[key] > 10000 and 
+                if(vips_pps[key] > 1 and 
                    vips_pps[key] > vips_baseline[key]*vips_multiplier[key]):
                     ratio = vips_pps[key]//vips_baseline[key]
+                    vips_flags[key] = 1
                     print("possible ddos on %s with over baseline ratio %s"
                          %(vips_map[key],ratio,))
             vips_baseline[key] = vips_pps[key]

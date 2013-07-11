@@ -50,8 +50,9 @@ class NFLOWv5(object):
         flow_count = header[1]
         flow = 1
         flow_list = list()
+        ddos_list = list()
         while flow <= flow_count:
             flow_record = struct.unpack(self._flow_fmt,packet[24*flow:24*flow+48])
             flow_list.append([flow_record[1],flow_record[6], flow_record[5]])
             flow += 1
-        return flow_list
+        return flow_list, ddos_list
