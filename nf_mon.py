@@ -3,6 +3,7 @@
 import gevent.socket as socket
 import gevent
 import statsd
+import redis
 import sys
 import struct
 import ipfix
@@ -26,6 +27,7 @@ NF5 = nflowv5.NFLOWv5()
 IPF = ipfix.IPFIX()
 SAMPLING_RATE = 2000
 nfmon_gauge = statsd.Gauge('netflow_mon_pps')
+rdb = redis.StrictRedis()
 
 if not len(sys.argv) > 1:
     print("cant find file with mapping")
@@ -75,8 +77,9 @@ def collect_flow():
 def analyze_stats():
     gevent.sleep(60)
     if ddos_records:
-        for record in ddos_records:
-            print(record)
+        rdb.publish('ddos_reports', ddos_records)
+#        for record in ddos_records:
+#            print(record)
         for key in vips_flags.keys():
             if vips_flags[key] == 1:
                 vips_flags[key] = 0
