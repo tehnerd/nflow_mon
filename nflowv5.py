@@ -56,14 +56,14 @@ class NFLOWv5(object):
             flow_list.append([flow_record[1],flow_record[6], flow_record[5]])
             if(flag_dict and flow_record[1] in flag_dict and
                flag_dict[flow_record[1]] == 1):
-                ddos_list.append((agent,
-                                 flow_record[0],
-                                 flow_record[1],
-                                 flow_record[13],
-                                 flow_record[9],
-                                 flow_record[10],
-                                 flow_record[3],
-                                 flow_record[6],
-                                 flow_record[5]))
+                ddos_list.append((flow_record[0],
+                                  flow_record[1],
+                                  flow_record[13],
+                                  flow_record[9],
+                                  flow_record[10],
+                                  flow_record[3],
+                                  flow_record[6],
+                                  flow_record[5],
+                                  agent))
             flow += 1
         return flow_list, ddos_list

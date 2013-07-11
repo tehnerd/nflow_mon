@@ -80,7 +80,7 @@ def analyze_stats():
         for key in vips_flags.keys():
             if vips_flags[key] == 1:
                 vips_flags[key] = 0
-        ddos_records = list()
+        del ddos_records[:]
     for key in vips_pps.keys():
         if vips_pps[key] != 0:
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
