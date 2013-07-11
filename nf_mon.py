@@ -15,9 +15,9 @@ dsock.bind((DAEMON_IP, DAEMON_PORT))
 NF5 = nflowv5.NFLOWv5()
 IPF = ipfix.IPFIX()
 SAMPLING_RATE = 2000
-nfmon_gauge = statsd.Gauge('netflow_mon')
+nfmon_gauge = statsd.Gauge('netflow_mon_pps')
 
-vips_bw = dict()
+vips_pps = dict()
 vips_baseline = dict()
 vips_multiplyer = dict()
 vips_map = dict()
@@ -40,14 +40,14 @@ for vip in vips_file:
         sys.exit("vips file must be in format <vip> -- <baseline>")
     vip_net = socket.inet_aton(vip[0])
     vip_int = struct.unpack('!L',vip_net)[0]
-    vips_bw[vip_int] = 0
+    vips_pps[vip_int] = 0
     vips_baseline[vip_int] = 0
     vips_multiplyer[vip_int] = int(vip[1])
     vips_map[vip_int] = vip[0]
 
 def clear_bw():
-    for key in vips_bw.keys():
-        vips_bw[key] = 0
+    for key in vips_pps.keys():
+        vips_pps[key] = 0
 
 def collect_flow():
     while True:
@@ -59,19 +59,20 @@ def collect_flow():
             flow_list = IPF.parse_set(packet, agent[0])
         if flow_list:
             for flow in flow_list:
-                if flow[0] in vips_bw:
-                    vips_bw[flow[0]] += (flow[1]*SAMPLING_RATE)
+                if flow[0] in vips_pps:
+                    vips_pps[flow[0]] += (flow[2]*SAMPLING_RATE)
 
 
 def analyze_stats():
     gevent.sleep(60)
-    for key in vips_bw.keys():
-        if vips_bw[key] != 0:
-            nfmon_gauge.send('bw_'+vips_map[key].replace('.','-'),vips_bw[key])
+    for key in vips_pps.keys():
+        if vips_pps[key] != 0:
+            nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
-                if vips_bw[key] > vips_baseline[key]*vips_multiplyer[key]:
+                if vips_pps[key] > 10000 and 
+                   vips_pps[key] > vips_baseline[key]*vips_multiplyer[key]:
                     print("possible ddos on %s"%(vips_map[key],))
-            vips_baseline[key] = vips_bw[key]
+            vips_baseline[key] = vips_pps[key]
     clear_bw()
 
 def main():
