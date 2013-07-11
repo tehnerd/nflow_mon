@@ -2,6 +2,7 @@
 
 import gevent.socket as socket
 import gevent
+import statsd
 import sys
 import struct
 import ipfix
@@ -14,6 +15,7 @@ dsock.bind((DAEMON_IP, DAEMON_PORT))
 NF5 = nflowv5.NFLOWv5()
 IPF = ipfix.IPFIX()
 SAMPLING_RATE = 2000
+nfmon_gauge = statsd.Gauge('netflow_mon')
 
 vips_bw = dict()
 vips_baseline = dict()
@@ -65,7 +67,7 @@ def analyze_stats():
     gevent.sleep(60)
     for key in vips_bw.keys():
         if vips_bw[key] != 0:
-            print("%s -- %s"%(vips_map[key],vips_bw[key],))
+            nfmon_gauge.send('bw_'+vips_map[key].replace('.','-'),vips_bw[key])
             if vips_baseline[key] != 0:
                 if vips_bw[key] > vips_baseline[key]*vips_multiplyer[key]:
                     print("possible ddos on %s"%(vips_map[key],))
