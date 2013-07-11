@@ -19,7 +19,7 @@ nfmon_gauge = statsd.Gauge('netflow_mon_pps')
 
 vips_pps = dict()
 vips_baseline = dict()
-vips_multiplyer = dict()
+vips_multiplier = dict()
 vips_map = dict()
 cntr = dict()
 
@@ -42,7 +42,7 @@ for vip in vips_file:
     vip_int = struct.unpack('!L',vip_net)[0]
     vips_pps[vip_int] = 0
     vips_baseline[vip_int] = 0
-    vips_multiplyer[vip_int] = int(vip[1])
+    vips_multiplier[vip_int] = int(vip[1])
     vips_map[vip_int] = vip[0]
 
 def clear_bw():
@@ -70,8 +70,10 @@ def analyze_stats():
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
                 if(vips_pps[key] > 10000 and 
-                   vips_pps[key] > vips_baseline[key]*vips_multiplyer[key]):
-                    print("possible ddos on %s"%(vips_map[key],))
+                   vips_pps[key] > vips_baseline[key]*vips_multiplier[key]):
+                    ratio = vips_pps[key]//vips_baseline[key]
+                    print("possible ddos on %s with over baseline ratio %s"
+                         %(vips_map[key],ratio,))
             vips_baseline[key] = vips_pps[key]
     clear_bw()
 
