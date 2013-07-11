@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import gevent.socket as socket
+from multiprocessing import Process
+import cPickle as pickle
 import gevent
 import statsd
 import redis
@@ -73,13 +75,21 @@ def collect_flow():
         if ddos_list:
             ddos_records.append(ddos_list)
 
+def parse_reports():
+    rdb = redis.StrictRedis()
+    queue = rdb.pubsub()
+    queue.subscribe('ddos_reports')
+    for report in queue.listen():
+        try:
+            for line in pickle.loads(report['data']):
+                print(line)
+        except:
+            print(report['data'])
 
 def analyze_stats():
     gevent.sleep(60)
     if ddos_records:
-        rdb.publish('ddos_reports', ddos_records)
-#        for record in ddos_records:
-#            print(record)
+        rdb.publish('ddos_reports', pickle.dumps(ddos_records))
         for key in vips_flags.keys():
             if vips_flags[key] == 1:
                 vips_flags[key] = 0
@@ -98,10 +108,13 @@ def analyze_stats():
     clear_bw()
 
 def main():
+    report_process = Process(target=parse_reports)
+    report_process.start()
     gevent.spawn(collect_flow)
     while True:
         analyze_job = gevent.spawn(analyze_stats)
         gevent.joinall([analyze_job])
+    report_process.join()
 
 if __name__ == "__main__":
     main()
