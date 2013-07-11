@@ -208,6 +208,7 @@ class IPFIX(object):
         self.template_dict[agent][tmplt_id] = "!"
         self.template_len_dict[agent][tmplt_id] = 0
         self.ordinary_fields[agent][tmplt_id] = list()
+        self.extended_fields[agent][tmplt_id] = list()
         tmplt_fields_count = tmplt_record[1]
         fld_cntr = 1
         packet = packet[24:]
@@ -222,6 +223,13 @@ class IPFIX(object):
                    self.ipfix_dict[str(fld[0])] == "octetDeltaCount" or
                    self.ipfix_dict[str(fld[0])] == "packetDeltaCount"):
                     self.ordinary_fields[agent][tmplt_id].append(fld_cntr-1)
+                    self.extended_fields[agent][tmplt_id].append(fld_cntr-1)
+                if(self.ipfix_dict[str(fld[0])] == "sourceIPv4Address" or
+                   self.ipfix_dict[str(fld[0])] == "protocolIdentifier" or
+                   self.ipfix_dict[str(fld[0])] == "sourceTransportPort" or
+                   self.ipfix_dict[str(fld[0])] == "destinationTransportPort" or
+                   self.ipfix_dict[str(fld[0])] == "ingressInterface"): 
+                    self.extended_fields[agent][tmplt_id].append(fld_cntr-1)
                 fld_cntr += 1
                 packet = packet[4:]
             else:
@@ -241,9 +249,9 @@ class IPFIX(object):
                                in self.ordinary_fields[agent][set_hdr[0]]]
             if(flag_dict and ordinary_record[0] in flag_dict and
                flag_dict[ordinary_record[0]] == 1):
-                print("123")
-                ddos_list.append('1')
-                flag_dict[ordinary_record[0]] = 0
+                extended_record = [flow_record[cntr] for cntr
+                               in self.extended_fields[agent][set_hdr[0]]]
+                ddos_list.append(extended_record)
             offset += tmplt_len
             flow_list.append(ordinary_record)
         return flow_list, ddos_list
