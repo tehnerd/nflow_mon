@@ -7,6 +7,14 @@ import cPickle as pickle
 import gevent
 import statsd
 import redis
+try:
+    from send_notification import send_notification
+except ImportError:
+    def send_notification(ip, ratio):
+        print("possible ddos on %s with over baseline ratio %s"
+             %(ip,ratio,))
+
+
 import sys
 import struct
 import ipfix
@@ -59,10 +67,6 @@ def clear_bw():
     for key in vips_pps.keys():
         vips_pps[key] = 0
 
-def send_notification(ip, ratio):
-    print("possible ddos on %s with over baseline ratio %s"
-          %(ip,ratio,))
-
 def collect_flow():
     while True:
         packet, agent = dsock.recvfrom(9000)
@@ -88,7 +92,8 @@ def collect_reports():
         try:
             report = pickle.loads(report['data'])
             report_handler.report_handler(report)
-        except:
+        except Exception, e :
+            print(e)
             print(report['data'])
             print("hmmm")
 
@@ -104,13 +109,11 @@ def analyze_stats():
         if vips_pps[key] != 0:
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
-                if(vips_pps[key] > 1 and 
+                if(vips_pps[key] > 60000 and 
                    vips_pps[key] > vips_baseline[key]*vips_multiplier[key]):
                     ratio = vips_pps[key]//vips_baseline[key]
                     vips_flags[key] = 1
-                    send_notifcation(vips_map[key],ratio)
-#                    print("possible ddos on %s with over baseline ratio %s"
-#                         %(vips_map[key],ratio,))
+                    send_notification(vips_map[key],ratio)
             vips_baseline[key] = vips_pps[key]
     clear_bw()
 

@@ -1,5 +1,11 @@
 import socket
 import operator
+import struct
+try:
+    from send_notification import send_report_email
+except ImportError:
+    def send_report_email(a,b):
+        pass
 
 """
 report in format of 
@@ -12,6 +18,8 @@ def int_to_ip(ip_int):
 def report_handler(report):
     report_dict_pps = dict()
     report_dict_bw = dict()
+    sorted_report_pps = list()
+    sorted_report_bw = list()
     for line in report:
         # we will aggegate by:
         #src_ip, dst_ip, proto, dport, input_intf, agent
@@ -25,9 +33,25 @@ def report_handler(report):
                             line[4],line[5],line[8]] = line[7]
             report_dict_bw[line[0],line[1],line[2],
                            line[4],line[5],line[8]] = line[6]   
+    report_list = sorted(report_dict_pps.iteritems(),
+                               key=operator.itemgetter(1))[-100:]
+    for line in report_list:
+        sorted_report_pps.append((int_to_ip(line[0][0]),
+                                 int_to_ip(line[0][1]),
+                                 line[0][3],
+                                 line[0][4],
+                                 line[0][5],
+                                 line[1]))
 
-    sorted_pps_report = sorted(report_dict_pps.iteritems(),
-                               key=operator.itemgetter(1))
-    sorted_bw_report = sorted(report_dict_bw.iteritems(),
-                               key=operator.itemgetter(1))
-    print(sorted_pps_report)
+    report_list = sorted(report_dict_bw.iteritems(),
+                               key=operator.itemgetter(1))[-100:]
+    for line in report_list:
+        sorted_report_bw.append((int_to_ip(line[0][0]),
+                                 int_to_ip(line[0][1]),
+                                 line[0][3],
+                                 line[0][4],
+                                 line[0][5],
+                                 line[1]))
+
+    send_report_email(sorted_report_pps,sorted_report_bw)
+
