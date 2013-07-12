@@ -2,6 +2,7 @@
 
 import gevent.socket as socket
 from multiprocessing import Process
+import report_handler
 import cPickle as pickle
 import gevent
 import statsd
@@ -58,6 +59,10 @@ def clear_bw():
     for key in vips_pps.keys():
         vips_pps[key] = 0
 
+def send_notification(ip, ratio):
+    print("possible ddos on %s with over baseline ratio %s"
+          %(ip,ratio,))
+
 def collect_flow():
     while True:
         packet, agent = dsock.recvfrom(9000)
@@ -73,18 +78,19 @@ def collect_flow():
                 if flow[0] in vips_pps:
                     vips_pps[flow[0]] += (flow[2]*SAMPLING_RATE)
         if ddos_list:
-            ddos_records.append(ddos_list)
+            ddos_records.extend(ddos_list)
 
-def parse_reports():
+def collect_reports():
     rdb = redis.StrictRedis()
     queue = rdb.pubsub()
     queue.subscribe('ddos_reports')
     for report in queue.listen():
         try:
-            for line in pickle.loads(report['data']):
-                print(line)
+            report = pickle.loads(report['data'])
+            report_handler.report_handler(report)
         except:
             print(report['data'])
+            print("hmmm")
 
 def analyze_stats():
     gevent.sleep(60)
@@ -102,13 +108,14 @@ def analyze_stats():
                    vips_pps[key] > vips_baseline[key]*vips_multiplier[key]):
                     ratio = vips_pps[key]//vips_baseline[key]
                     vips_flags[key] = 1
-                    print("possible ddos on %s with over baseline ratio %s"
-                         %(vips_map[key],ratio,))
+                    send_notifcation(vips_map[key],ratio)
+#                    print("possible ddos on %s with over baseline ratio %s"
+#                         %(vips_map[key],ratio,))
             vips_baseline[key] = vips_pps[key]
     clear_bw()
 
 def main():
-    report_process = Process(target=parse_reports)
+    report_process = Process(target=collect_reports)
     report_process.start()
     gevent.spawn(collect_flow)
     while True:
