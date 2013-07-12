@@ -63,7 +63,7 @@ for vip in vips_file:
     vips_multiplier[vip_int] = int(vip[1])
     vips_map[vip_int] = vip[0]
 
-def clear_bw():
+def clear_pps():
     for key in vips_pps.keys():
         vips_pps[key] = 0
 
@@ -109,13 +109,14 @@ def analyze_stats():
         if vips_pps[key] != 0:
             nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
+                # we dont care about services with pps < 10kpps
                 if(vips_pps[key] > 60000 and 
                    vips_pps[key] > vips_baseline[key]*vips_multiplier[key]):
                     ratio = vips_pps[key]//vips_baseline[key]
                     vips_flags[key] = 1
                     send_notification(vips_map[key],ratio)
             vips_baseline[key] = vips_pps[key]
-    clear_bw()
+    clear_pps()
 
 def main():
     report_process = Process(target=collect_reports)
