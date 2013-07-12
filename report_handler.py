@@ -38,6 +38,7 @@ def report_handler(report):
     for line in report_list:
         sorted_report_pps.append((int_to_ip(line[0][0]),
                                  int_to_ip(line[0][1]),
+                                 line[0][2],
                                  line[0][3],
                                  line[0][4],
                                  line[0][5],
@@ -48,6 +49,7 @@ def report_handler(report):
     for line in report_list:
         sorted_report_bw.append((int_to_ip(line[0][0]),
                                  int_to_ip(line[0][1]),
+                                 line[0][2],
                                  line[0][3],
                                  line[0][4],
                                  line[0][5],
