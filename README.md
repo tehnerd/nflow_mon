@@ -1,5 +1,5 @@
 first of all what it is not:
-it's not a fullfeature netflow collector (for that purpose i highly recomends nfacct (www.pmacct.net))
+it's not a fullfeature netflow collector (for that purpose i highly recomends nfacct (www.pmacct.net)
 
 this tool is a simple traffic/ddos anomaly analyzer.
 right now it can be feeded by nflowv5 and ipfix.
@@ -17,3 +17,10 @@ after that it calls send_report_email func (must be redefined) and send all this
 
 also  each minutes daemon sends to statsd info about packetrate to the specific VIP.
 
+
+list of vips must be in format:
+<ip> <multiplier>
+for example
+192.168.0.1 10 
+that means "we will monitor(thru the netflow) all traffic with dst 192.168.0.1
+and if in 1 minute difference between avg_pps will be more that 10 times -> report about it"
