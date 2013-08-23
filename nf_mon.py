@@ -7,6 +7,7 @@ import cPickle as pickle
 import gevent
 import statsd
 import redis
+import datetime
 try:
     from send_notification import send_notification
 except ImportError:
@@ -72,6 +73,8 @@ def collect_flow():
         packet, agent = dsock.recvfrom(9000)
         flow_list = list()
         ddos_list = list()
+        if(agent[1] == 0):
+            print(datetime.datetime.now())
         if(packet[1] == '\x05'):
             flow_list, ddos_list = NF5.parse_packet(packet, 
                                                     agent[0], vips_flags)
@@ -107,7 +110,7 @@ def analyze_stats():
         del ddos_records[:]
     for key in vips_pps.keys():
         if vips_pps[key] != 0:
-            nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
+            #nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
             if vips_baseline[key] != 0:
                 # we dont care about services with pps < 10kpps
                 if(vips_pps[key] > 60000 and 

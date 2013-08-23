@@ -48,6 +48,12 @@ class NFLOWv5(object):
     def parse_packet(self, packet, agent, flag_dict = None):
         header = self.parse_header(packet)
         flow_count = header[1]
+        if(flow_count > 30):
+            print('error in flow count')
+            return [],[]
+        if(len(packet) > (24 + flow_count*48)):
+            print('probably mailformed packet')
+            return [],[]
         flow = 1
         flow_list = list()
         ddos_list = list()
