@@ -226,6 +226,7 @@ class IPFIX(object):
                     self.extended_fields[agent][tmplt_id].append(fld_cntr-1)
                 if(self.ipfix_dict[str(fld[0])] == "sourceIPv4Address" or
                    self.ipfix_dict[str(fld[0])] == "protocolIdentifier" or
+                   self.ipfix_dict[str(fld[0])] == "sourceIPv6Address" or
                    self.ipfix_dict[str(fld[0])] == "sourceTransportPort" or
                    self.ipfix_dict[str(fld[0])] == "destinationTransportPort" or
                    self.ipfix_dict[str(fld[0])] == "ingressInterface"): 
@@ -242,6 +243,7 @@ class IPFIX(object):
         offset = 20
         flow_list = list()
         ddos_list = list()
+        other_list = list()
         while offset < set_len:
             flow_record = struct.unpack(tmplt_struct,
                                         packet[offset:offset + tmplt_len])
@@ -253,9 +255,17 @@ class IPFIX(object):
                                in self.extended_fields[agent][set_hdr[0]]]
                 extended_record.append(agent)
                 ddos_list.append(extended_record)
+            if(flag_dict and ordinary_record[0] in flag_dict and
+               flag_dict[ordinary_record[0]] == 0):
+                pass
+            if(flag_dict and ordinary_record[0] not in flag_dict):
+                extended_record = [flow_record[cntr] for cntr 
+                               in self.extended_fields[agent][set_hdr[0]]]
+                extended_record.append(agent)
+                other_list.append(extended_record)
             offset += tmplt_len
             flow_list.append(ordinary_record)
-        return flow_list, ddos_list
+        return flow_list, ddos_list, other_list
            
 
     def parse_set(self, packet, agent, flag_dict = None):
@@ -267,10 +277,10 @@ class IPFIX(object):
         set_hdr = struct.unpack(self._set_hdr_fmt, packet[16:20])
         if (set_hdr[0] == 2):
             self.parse_tmplt_set(packet, agent)
-            return None, None
+            return None, None, None
         if(set_hdr[0] in self.template_dict[agent]):
             return self.parse_data_set(packet, set_hdr, agent, flag_dict)
-        return None, None
+        return None, None, None
 
 
 

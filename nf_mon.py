@@ -8,6 +8,7 @@ import gevent
 import statsd
 import redis
 import datetime
+import json
 try:
     from send_notification import send_notification
 except ImportError:
@@ -20,6 +21,13 @@ import sys
 import struct
 import ipfix
 import nflowv5
+import os
+
+pid = os.fork()
+if pid != 0:
+    exit(0)
+
+os.setsid()
 
 #dictionary initialazing
 vips_pps = dict()
@@ -28,6 +36,7 @@ vips_multiplier = dict()
 vips_map = dict()
 vips_flags = dict()
 ddos_records = list()
+other_records = list()
 
 
 
@@ -73,17 +82,23 @@ def collect_flow():
         packet, agent = dsock.recvfrom(9000)
         flow_list = list()
         ddos_list = list()
+        other_list = list()
         if(agent[1] == 0):
             print(datetime.datetime.now())
         if(packet[1] == '\x05'):
             flow_list, ddos_list = NF5.parse_packet(packet, 
                                                     agent[0], vips_flags)
         elif(packet[1] == '\x0A'):
-            flow_list, ddos_list = IPF.parse_set(packet, agent[0], vips_flags)
+            flow_list, ddos_list, other_list = IPF.parse_set(packet, agent[0], vips_flags)
         if flow_list:
             for flow in flow_list:
                 if flow[0] in vips_pps:
-                    vips_pps[flow[0]] += (flow[2]*SAMPLING_RATE)
+                    if flow[2] > 100000:
+                        continue
+                    else:
+                        vips_pps[flow[0]] += (flow[2]*SAMPLING_RATE)
+        if other_list:
+            other_records.extend(other_list)
         if ddos_list:
             ddos_records.extend(ddos_list)
 
@@ -96,9 +111,9 @@ def collect_reports():
             report = pickle.loads(report['data'])
             report_handler.report_handler(report)
         except Exception, e :
-            print(e)
-            print(report['data'])
-            print("hmmm")
+            continue
+
+
 
 def analyze_stats():
     gevent.sleep(60)
@@ -108,6 +123,9 @@ def analyze_stats():
             if vips_flags[key] == 1:
                 vips_flags[key] = 0
         del ddos_records[:]
+    if other_records:
+        rdb.publish('internal_traffic', pickle.dumps(other_records))
+        del other_records[:]
     for key in vips_pps.keys():
         if vips_pps[key] != 0:
             #nfmon_gauge.send('pps_'+vips_map[key].replace('.','-'),vips_pps[key])
