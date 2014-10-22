@@ -195,6 +195,8 @@ class IPFIX(object):
         "8":"Q",
         "16":"2Q",
         }
+        #hack to unpack 16bit ipv6 int aka 2Q
+        self.V6_MAGIC_LEN = 23
         self.template_dict = dict()
         self.template_len_dict = dict()
         self.ordinary_fields = dict()
@@ -211,6 +213,7 @@ class IPFIX(object):
         self.extended_fields[agent][tmplt_id] = list()
         tmplt_fields_count = tmplt_record[1]
         fld_cntr = 1
+        fld_num = 0
         packet = packet[24:]
         while fld_cntr <= tmplt_fields_count:
             fld_spec_id = struct.unpack("!H",packet[0:2])[0]
@@ -222,20 +225,25 @@ class IPFIX(object):
                    self.ipfix_dict[str(fld[0])] == "destinationIPv6Address" or
                    self.ipfix_dict[str(fld[0])] == "octetDeltaCount" or
                    self.ipfix_dict[str(fld[0])] == "packetDeltaCount"):
-                    self.ordinary_fields[agent][tmplt_id].append(fld_cntr-1)
-                    self.extended_fields[agent][tmplt_id].append(fld_cntr-1)
+                    self.ordinary_fields[agent][tmplt_id].append(fld_num)
+                    self.extended_fields[agent][tmplt_id].append(fld_num)
                 if(self.ipfix_dict[str(fld[0])] == "sourceIPv4Address" or
                    self.ipfix_dict[str(fld[0])] == "protocolIdentifier" or
                    self.ipfix_dict[str(fld[0])] == "sourceIPv6Address" or
                    self.ipfix_dict[str(fld[0])] == "sourceTransportPort" or
                    self.ipfix_dict[str(fld[0])] == "destinationTransportPort" or
                    self.ipfix_dict[str(fld[0])] == "ingressInterface"): 
-                    self.extended_fields[agent][tmplt_id].append(fld_cntr-1)
+                    self.extended_fields[agent][tmplt_id].append(fld_num)
+                if self.format_dict[str(fld[1])] == "2Q":
+                    fld_num += 2
+                else:
+                    fld_num += 1
                 fld_cntr += 1
                 packet = packet[4:]
             else:
                 packet = packet[8:]
                 fld_cntr += 1
+
     def parse_data_set(self,packet, set_hdr, agent, flag_dict):
         tmplt_struct = self.template_dict[agent][set_hdr[0]]
         set_len = set_hdr[1]
@@ -261,6 +269,13 @@ class IPFIX(object):
             if(flag_dict and ordinary_record[0] not in flag_dict):
                 extended_record = [flow_record[cntr] for cntr 
                                in self.extended_fields[agent][set_hdr[0]]]
+
+                if len(flow_record) == self.V6_MAGIC_LEN:
+                    src = (flow_record[0]<<64)|flow_record[1]
+                    dst = (flow_record[2]<<64)|flow_record[3]
+                    extended_record[0] = src
+                    extended_record[1] = dst
+
                 extended_record.append(agent)
                 other_list.append(extended_record)
             offset += tmplt_len

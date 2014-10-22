@@ -19,6 +19,7 @@ def collect_internal_traffic():
             for record in report:
                 agent = record[8]
                 src = record[0]
+                print(record)
                 dst = record[1]
                 intf = record[5]
                 if agent not in record_dict:
@@ -37,7 +38,16 @@ def collect_internal_traffic():
             for agent in record_dict:
                 toptalkers = sorted(record_dict[agent].items(),key=lambda x:x[1])[-100:]
                 min_dict[agent] = toptalkers
+            for agent in intf_record_dict:
+                if agent not in min_dict_intf:
+                    min_dict_intf[agent] = dict()
+                for intf in intf_record_dict[agent]:
+                    toptalkers = sorted(intf_record_dict[agent][intf].items(),
+                                            key=lambda x:x[1])[-100:]
+                    min_dict_intf[agent][intf] = toptalkers
+                
             rdb.set('min_toptalkers',json.dumps(min_dict))
+            rdb.set('min_toptalkers_intf',json.dumps(min_dict_intf))
         except Exception, e :
             continue
 

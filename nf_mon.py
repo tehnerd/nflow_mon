@@ -55,7 +55,7 @@ def init_nflow_dicts(vips_file, vips_pps, vips_flags, vips_baseline,
         vips_map[vip_int] = vip[0]
 
 def clear_pps(vips_pps):
-    for key in vips_pps.keys():
+    for key in vips_pps:
         vips_pps[key] = 0
 
 def collect_flow(dsock, NF5, IPF, vips_flags, vips_pps,
@@ -96,7 +96,7 @@ def collect_reports():
 
 
 def analyze_stats(rdb, ddos_records, other_records, vips_flags, vips_pps,
-                  vips_baseline, vips_multiplier):
+                  vips_baseline, vips_multiplier, vips_map):
     gevent.sleep(60)
     if ddos_records:
         rdb.publish('ddos_reports', pickle.dumps(ddos_records))
@@ -160,7 +160,8 @@ def main():
         analyze_job = gevent.spawn(analyze_stats, rdb, ddos_records,
                                    other_records,
                                    vips_flags, vips_pps, 
-                                   vips_baseline, vips_multiplier)
+                                   vips_baseline, vips_multiplier,
+                                   vips_map)
         gevent.joinall([analyze_job])
     report_process.join()
 
